@@ -2,7 +2,7 @@
 
 给 Samsung Galaxy S23（SM-S9110）用的 KernelSU 开机自动恢复工具：**重启后不接电脑、不插 USB，App 自己把临时 root 抢回来并加载 KernelSU。**
 
-![界面](docs/screenshot.png)
+![界面](docs/screenshot-app.png)
 
 **开箱即用：SM-S9110 / 固件 `S9110ZHS8FZI1`（港版 TGY，One UI 8.5 / Android 16）。**
 其他 S23 型号和其他固件必须自己编译 payload，见 [其他 S23 怎么自己做](#其他-s23--其他固件怎么自己做)。
