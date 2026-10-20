@@ -197,7 +197,7 @@ port/
     target.h                 参考 target
     p0_fingerprint.h         64 行 / 0x8000 步进的物理指纹表
 tools/e2e.sh                 重启验收
-docs/screenshot.png
+docs/screenshot-app.png
 ```
 
 ---
