@@ -49,7 +49,7 @@
 | --- | --- | --- | --- |
 | SM-S911U1 | `dm1q` | `dm1q-S911U1UES6DYI3` | 实测通过（内核 `5.15.153`） |
 | SM-S916B | `dm2q` | `dm2q-S916BXXSAFZG1` | 硬件验证走 ADB shell（与本 App 的执行方式一致）；上游未放进 App 默认源 |
-| SM-S9180 | `dm3q` | `dm3q-S9180ZHS8ZF5` | 测试中 |
+| SM-S9180 | `dm3q` | `dm3q-S9180ZHS8FZF5` | 测试中 |
 | SM-S918B | `dm3q` | `dm3q-S918BXXSAFZF5` | 上游称经 Shizuku 模式全链路验证（exploit → late-load → `su`） |
 
 要用得自己编，流程见后面。
@@ -110,7 +110,7 @@ try ──命中──> late ──成功──> verify ──su 可用──> �
 
 - **root 是临时的**。不碰任何分区、不改 boot，重启就没了——这也正是它能在锁 BL 的机器上工作的原因。
 - **一次开机一发子弹**。失败后 App 的行为是重启换 boot，不是原地重试。
-- **命中率不是 100%**。上游在 SM-S9110 上的记录是 5 成功 / 7 次运行，两次失败发生在同一个 boot（slide `0x188000`）；失败后重跑同一 boot 无效。
+- **命中率不是 100%**。本项目在 SM-S9110 上的实测记录是 5 成功 / 7 次运行，两次失败发生在同一个 boot（slide `0x188000`）；失败后重跑同一 boot 无效。
 - **OTA 之后立刻失效**。新固件 = 新内核 = 指纹和偏移全变，而且这时候你手上已经没有 root，只能回到电脑重走一遍移植流程。**升级前先确认目标固件有没有人做过 profile。**
 - **窗口期设备不设防**。exploit 拿到的是 kernel 域 root，late-load 完成前 SELinux 处于宽松状态，别在公共环境跑。
 - **无线调试常开 = adbd 常开**。任何能连上 5555 且持有授权密钥的东西都能拿到 shell（uid 2000）。这是方案的前置条件，不是副作用，自己权衡。
@@ -186,9 +186,16 @@ assets/payload/
   root.sh                    设备端执行体：fire / try / poll / late / verify
   cve-2026-43499-root        su 通道 + --late-load 装载器
   rmg-app.so                 exploit payload
-  ksud-dm2q                  KernelSU late-load 二进制
-  kernelsu-dm2q.ko           KernelSU 内核模块
+  ksud-dm2q                  KernelSU late-load 二进制（模块内嵌）
+  kernelsu-dm2q.ko           解包的模块副本（核对用，不参与装载）
 res/                         M3 语义色板、drawable、布局
+patches/
+  upstream-late-load.patch   编译 root helper 前必须打到上游的补丁
+port/
+  README.md                  S9110 移植记录（常量来源、坑、验证边界）
+  dm1q-S9110ZHS8FZI1/
+    target.h                 参考 target
+    p0_fingerprint.h         64 行 / 0x8000 步进的物理指纹表
 tools/e2e.sh                 重启验收
 docs/screenshot.png
 ```
@@ -225,14 +232,15 @@ Java 侧与固件无关，**要换的只有 `assets/payload/` 里那 5 个文件
 上游 [`BuSung-dev/Root-My-Galaxy-Payloads`](https://github.com/BuSung-dev/Root-My-Galaxy-Payloads)（Apache-2.0）的 `src/targets/` 下，一个目录 = 一个固件 profile：
 
 ```text
-dm1q-S9110ZHS8FZI1      <- 本仓库用的这个
 dm1q-S911U1UES6DYI3
 dm2q-S916BXXSAFZG1
-dm3q-S9180ZHS8ZF5
+dm3q-S9180ZHS8FZF5
 dm3q-S918BXXSAFZF5
 ```
 
-有就直接跳到第 5 步编译，没有就从第 1 步开始移植。
+注意：**`dm1q-S9110ZHS8FZI1` 不在上游**，它是本项目自己移植的。源码放在本仓库 [`port/dm1q-S9110ZHS8FZI1/`](port/dm1q-S9110ZHS8FZI1)，可以直接当模板对照，但里面的数值只对 `S9110ZHS8FZI1` 有效。
+
+上游有就直接跳到第 5 步编译，没有就从第 1 步开始移植。
 
 ```bash
 git clone https://github.com/BuSung-dev/Root-My-Galaxy-Payloads.git rmg
@@ -241,7 +249,7 @@ cd rmg
 
 ### 1. 拿到目标固件的 boot.img
 
-用 samloader-rs 或任何能下 Samsung 官方固件的工具，下**型号、CSC、版本号都对得上**的那一版：
+用 samloader-rs 或任何能下 Samsung 官方固件的工具，下**型号、CSC、版本号都对得上**的那一版（下面拿 S9110 / TGY 举例，换成你的）：
 
 ```bash
 samloader check-update --model SM-S9110 --region TGY --all --verbose
@@ -276,8 +284,10 @@ BTF 在 raw Image 里是独立 blob，magic `9f eb 01 00`（小端 `0xeb9f`）�
 ### 3. 复制一个最接近的 target
 
 ```bash
-cp -r src/targets/dm1q-S9110ZHS8FZI1 src/targets/dm1q-<你的固件号>
+cp -r /path/to/root-my-s23/port/dm1q-S9110ZHS8FZI1 src/targets/dm1q-<你的固件号>
 ```
+
+改了目录名，就要同步改 `target.h` 末尾的 `P0_FINGERPRINT_HEADER`（它是相对 `src/` 的路径），否则编译时找不到指纹表。
 
 优先同 SoC 代号（`dm1q` / `dm2q` / `dm3q`），其次同内核版本号（`33413713`）。然后改 `target.h` 里这些**必须从这版 Image 重新推**的量：
 
@@ -294,7 +304,7 @@ cp -r src/targets/dm1q-S9110ZHS8FZI1 src/targets/dm1q-<你的固件号>
 | `KERNELSNITCH_THRESHOLD_MULT` | 碰撞阈值 | 只能实测；S9110 上默认 10 不够，降到 8 才过 |
 | `P0_ORACLE_PROBE_OFFSET` | 物理 base oracle 探测点 | 见第 4 步；S23 系实测在 `0x1f0000` 或 `0x1f8000` |
 
-这一步没有捷径。`docs/PORTING.md` 是方法论文档，`docs/SM-S9110-S9110ZHS8FZI1.md` 是一份「每个常量从哪来」的完整样例——照着抄**流程**，不要抄**数值**。
+这一步没有捷径。`docs/PORTING.md` 是方法论文档，本仓库 [`port/dm1q-S9110ZHS8FZI1/target.h`](port/dm1q-S9110ZHS8FZI1/target.h) 是一份填好的样例——照着抄**流程**，不要抄**数值**。
 
 ### 4. 生成 `p0_fingerprint.h`
 
@@ -309,17 +319,25 @@ perl tools/generate_p0_fingerprint.pl Image 0x1f8000 \
 for my $slide (map { $_ * 0x8000 } 0 .. 63) {
 ```
 
-本仓库的 `dm1q-S9110ZHS8FZI1/p0_fingerprint.h` 就是这么生成的（文件头注释写着 0x8000-step rows）。用错步进的话，奇数 `0x?8000` 的 slide 会全部匹配失败——而 tracefs 路线挂掉之后，物理 oracle 是唯一的兜底。
+本 App 用的那张 `dm1q-S9110ZHS8FZI1/p0_fingerprint.h` 就是 64 行版本，在 [`port/dm1q-S9110ZHS8FZI1/`](port/dm1q-S9110ZHS8FZI1)。用错步进的话，奇数 `0x?8000` 的 slide 会全部匹配失败——而 tracefs 路线挂掉之后，物理 oracle 是唯一的兜底。
 
 ### 5. 编译 exploit
 
-需要 Android NDK（r27 即可）：
+先打本仓库带的补丁——上游的 root helper 固定传 `--ephemeral`，dm1q/dm2q/dm3q 的 kdp 版 `ksud` 不认这个参数，late-load 会直接失败：
+
+```bash
+git apply /path/to/root-my-s23/patches/upstream-late-load.patch
+```
+
+它做两件事：把 `--ephemeral` 变成编译期开关；让 `KSU_LOADER_PATH` 能按 target 覆盖（本 target 指向 `/data/local/tmp/ksud-dm2q`）。
+
+然后编译。需要 Android NDK（r27 即可）：
 
 ```bash
 make TARGET=dm1q-<你的固件号> ANDROID_NDK_HOME=/path/to/ndk
 ```
 
-`Makefile` 里 `dm1q-*` / `dm2q-*` / `dm3q-*` 的 `-DSLIDE_STACK_WRITER=1` 已经按 target 配好，别自己加。
+`Makefile` 里按 target 配了 `-DSLIDE_STACK_WRITER=1`：`dm2q-S916BXXSAFZG1`、`dm3q-S918BXXSAFZF5`、`dm1q-S911U1UES6DYI3`，以及补丁加的 `dm1q-S9110ZHS8FZI1`。这几个的 `target.h` 里有 `#ifndef SLIDE_STACK_WRITER → #error`，不配就编不过。反过来，`dm3q-S9180ZHS8FZF5` 的 `target.h` 根本不用这个宏，上游也没给它配 block——别照抄。
 
 产物在 `build/<TARGET>/`：
 
@@ -330,14 +348,17 @@ cve-2026-43499-app.so   -> assets/payload/rmg-app.so
 
 ### 6. 配 KernelSU
 
-`kernelsu/` 下按 KMI 放好了预编译的模块和 `ksud`。S23 里 `dm2q` / `dm3q` / S9110 都是 `android13-5.15`；S911U1 是 `5.15.153`。选错 KMI 装不进去。
+`kernelsu/` 下按 KMI 放好了预编译的 `ksud`（**内核模块就嵌在它里面**，`--late-load` 装的是这一份）和可选的独立 `.ko`。S23 里 `dm2q` / `dm3q` / S9110 都是 `android13-5.15`；S911U1 是 `5.15.153`。选错 KMI 装不进去。
 
 ```bash
-cp kernelsu/android13-5.15.189_kernelsu-<你的target>.ko  ../root-my-s23/assets/payload/kernelsu-dm2q.ko
-cp kernelsu/ksud-<你的target>-kdp                        ../root-my-s23/assets/payload/ksud-dm2q
+cp kernelsu/ksud-<你的target>-kdp  ../root-my-s23/assets/payload/ksud-dm2q
+
+# 可选：留一份解包的 ko，方便核对，不参与装载
+cp kernelsu/android13-5.15.189_kernelsu-<你的target>.ko \
+   ../root-my-s23/assets/payload/kernelsu-dm2q.ko
 ```
 
-本仓库这两个文件来自 `dm2q-S916BXXSAFZG1`，`vermagic` 里带的是 `abS916BXXSAFZG1`。能在 S9110 上用，是因为 late-load 走手工装载、不校验 `vermagic`，而两台机器的内核都是 `5.15.189-android13-8-33413713`（modversions CRC 一致）。**内核版本号或编译配置一变，这套就不成立**，必须换对应 KMI 的 ko。
+本仓库的 `ksud-dm2q` 来自 `dm2q-S916BXXSAFZG1`，内嵌模块的 `vermagic` 里带的是 `abS916BXXSAFZG1`。能在 S9110 上用，是因为 late-load 走手工装载、不校验 `vermagic`，而两台机器的内核都是 `5.15.189-android13-8-33413713`（modversions CRC 一致）。**内核版本号或编译配置一变，这套就不成立**，必须换对应 KMI 的 ksud。
 
 ### 7. 重新打包并验证
 

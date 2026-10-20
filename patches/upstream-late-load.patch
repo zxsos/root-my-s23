@@ -1,0 +1,72 @@
+diff --git a/Makefile b/Makefile
+index c111122..170e24f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -3,6 +3,7 @@ TARGET ?= pa3q-S938NKSUACZF1
+ OUTDIR ?= build/$(TARGET)
+ 
+ APP_TARGET_CFLAGS :=
++ROOT_TARGET_CFLAGS ?=
+ ifeq ($(TARGET),dm2q-S916BXXSAFZG1)
+ APP_TARGET_CFLAGS := -DSLIDE_STACK_WRITER=1
+ endif
+@@ -15,8 +16,15 @@ endif
+ ifeq ($(TARGET),dm1q-S911U1UES6DYI3)
+ APP_TARGET_CFLAGS := -DSLIDE_STACK_WRITER=1
+ endif
++ifeq ($(TARGET),dm1q-S9110ZHS8FZI1)
++APP_TARGET_CFLAGS := -DSLIDE_STACK_WRITER=1
++ROOT_TARGET_CFLAGS := -DKSU_LOADER_PATH='"/data/local/tmp/ksud-dm2q"'
++endif
++
+ ifeq ($(TARGET),gts9-X710XXS6EZF1)
+ APP_TARGET_CFLAGS := -DSLIDE_STACK_WRITER=1
++# Preserve upstream behaviour: only the X710 loader understands --ephemeral.
++ROOT_TARGET_CFLAGS := -DKSU_LATE_LOAD_EPHEMERAL=1
+ endif
+ ifeq ($(TARGET),a53x-A536EXXSNGZG3)
+ API := 31
+@@ -98,7 +106,7 @@ $(PRELOAD): $(PRELOAD_SRCS) $(TARGET_HEADER) src/offset.h src/common.h src/kerne
+ 	  -shared -pthread -o $@
+ 
+ $(ROOT_HELPER): src/su_daemon.c | $(OUTDIR)
+-	$(TARGET_CC) -fPIE -pie -O2 -g0 -Wall -Wextra $< -ldl -o $@
++	$(TARGET_CC) -fPIE -pie -O2 -g0 -Wall -Wextra $(ROOT_TARGET_CFLAGS) $< -ldl -o $@
+ 
+ $(APP_PRELOAD): $(APP_PRELOAD_SRCS) $(TARGET_HEADER) src/offset.h src/common.h src/kernelsnitch/*.h | $(OUTDIR)
+ 	$(TARGET_CC) -DAPP_PAYLOAD=1 $(APP_TARGET_CFLAGS) -fPIC $(COMMON_CFLAGS) $(APP_PRELOAD_SRCS) \
+diff --git a/src/su_daemon.c b/src/su_daemon.c
+index 2cc6950..65a9e20 100644
+--- a/src/su_daemon.c
++++ b/src/su_daemon.c
+@@ -27,7 +27,11 @@
+ #define BOOTSTRAP_SOCK_PATH "/data/local/tmp/temp_su.sock"
+ #define HOLD_READY_SOCKET "cve43499_roothold"
+ #define SH_PATH "/system/bin/sh"
++/* Overridable per target: the loader binary must share the kernel build id
++ * with the device, so every profile points at its own ksud. */
++#ifndef KSU_LOADER_PATH
+ #define KSU_LOADER_PATH "/data/local/tmp/ksud-s25u-kdp"
++#endif
+ #define LOGCAT_PATH "/system/bin/logcat"
+ #define BOOTSTRAP_MARKER_CONFIG "/data/local/tmp/cve43499-root-marker-path"
+ 
+@@ -480,9 +484,17 @@ static int run_kernelsu_late_load(struct su_request *request, int conn) {
+     if (loader == 0) {
+       /* Let the downloaded target-specific ksud select its embedded module
+        * from the running kernel.  Ephemeral mode avoids replacing an existing
+-       * /data/adb/ksud while the app only needs the module for this boot. */
++       * /data/adb/ksud while the app only needs the module for this boot.
++       * Only the gts9 X710XXS6EZF1 loader accepts --ephemeral; every other
++       * Samsung kdp build (dm1q/dm2q/dm3q/s25u/A-series) rejects it as an
++       * unknown argument, so gate it behind a build flag. */
++#if defined(KSU_LATE_LOAD_EPHEMERAL) && KSU_LATE_LOAD_EPHEMERAL
+       execl(LOGCAT_PATH, "logcat", "late-load", "--ephemeral",
+             "--package-name", "me.weishu.kernelsu", (char *)NULL);
++#else
++      execl(LOGCAT_PATH, "logcat", "late-load",
++            "--package-name", "me.weishu.kernelsu", (char *)NULL);
++#endif
+       dprintf(STDERR_FILENO, "late-load: exec: %s\n", strerror(errno));
+       _exit(12);
+     }
