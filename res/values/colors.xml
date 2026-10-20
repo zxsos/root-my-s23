@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material 3 语义色板（深色）。
+  命名对齐 M3 的 color roles，不写死用途（不叫 bg_green 那种），
+  以后换主色只改这里。
+-->
+<resources>
+    <!-- 表面层次：深色主题靠 tonal 色差分层，不靠阴影 -->
+    <color name="md_surface">#121316</color>
+    <color name="md_surface_container_low">#191A1E</color>
+    <color name="md_surface_container">#1E1F23</color>
+    <color name="md_surface_container_high">#26272C</color>
+    <color name="md_surface_container_highest">#313238</color>
+
+    <color name="md_on_surface">#E5E2E1</color>
+    <color name="md_on_surface_variant">#C5C6CC</color>
+    <color name="md_outline">#8F9096</color>
+    <color name="md_outline_variant">#44464B</color>
+
+    <!-- 主色：绿色，语义上对应「已拿到 root」 -->
+    <color name="md_primary">#9ED89B</color>
+    <color name="md_on_primary">#0A3909</color>
+    <color name="md_primary_container">#1F4A1C</color>
+    <color name="md_on_primary_container">#BEF0B8</color>
+
+    <color name="md_secondary">#B7CCB4</color>
+    <color name="md_secondary_container">#354A33</color>
+    <color name="md_on_secondary_container">#D3E8CF</color>
+
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error_container">#FFDAD6</color>
+
+    <!-- 状态层（ripple）：M3 用 on-color 的低透明度，不是纯白 -->
+    <color name="md_ripple_on_primary">#330A3909</color>
+    <color name="md_ripple_on_secondary">#33D3E8CF</color>
+    <color name="md_ripple_neutral">#1FC5C6CC</color>
+
+    <color name="ic_bg">#121316</color>
+</resources>

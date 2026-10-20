@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M3 tonal button：secondaryContainer 底，用于「停止」这类次要动作 -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/md_ripple_on_secondary">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/md_secondary_container" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+</ripple>

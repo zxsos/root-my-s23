@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      底层还是平台 Theme.Material（不引 AppCompat / Material 库），
+      但所有可见属性都按 M3 的语义配：表面色、状态栏图标反转、accent。
+    -->
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/md_surface</item>
+        <item name="android:colorBackground">@color/md_surface</item>
+
+        <item name="android:statusBarColor">@color/md_surface</item>
+        <item name="android:navigationBarColor">@color/md_surface</item>
+        <!-- 深色底 → 系统图标必须用浅色 -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <!-- 光标、CheckBox/Switch 的选中态、以及各种平台控件的强调色 -->
+        <item name="android:colorAccent">@color/md_primary</item>
+        <item name="android:colorControlActivated">@color/md_primary</item>
+        <item name="android:colorControlHighlight">@color/md_ripple_neutral</item>
+
+        <item name="android:textColorPrimary">@color/md_on_surface</item>
+        <item name="android:textColorSecondary">@color/md_on_surface_variant</item>
+    </style>
+</resources>

@@ -1,0 +1,20 @@
+# 构建产物
+build/
+*.apk
+*.idsig
+
+# 签名密钥：build.sh 会在缺失时本地生成，绝不进仓库
+keystore/
+
+# build.sh 自动生成（内容随 payload 变化）
+assets/payload/sizes.txt
+
+# 运行日志
+*.log
+
+# 编辑器 / 系统垃圾
+.idea/
+.gradle/
+local.properties
+.DS_Store
+Thumbs.db

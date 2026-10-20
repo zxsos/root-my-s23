@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M3 卡片：深色主题不用阴影，靠 surface container 的 tonal 色差浮起来 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/md_surface_container_high" />
+    <corners android:radius="20dp" />
+</shape>

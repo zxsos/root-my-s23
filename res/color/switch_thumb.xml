@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M3 switch：选中 thumb=onPrimary / track=primary，未选中走 outline 系 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@color/md_on_primary" />
+    <item android:color="@color/md_outline" />
+</selector>

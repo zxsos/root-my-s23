@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 状态指示点，颜色由代码按运行状态 tint -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/md_on_surface_variant" />
+    <size
+        android:width="10dp"
+        android:height="10dp" />
+</shape>
