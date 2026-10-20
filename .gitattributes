@@ -1,0 +1,9 @@
+# 统一 LF。build.sh 要在 Git Bash / Linux 里能直接执行，
+# assets/payload/root.sh 要在设备上的 mksh 里跑 —— 两者都经不起一个 CR。
+* text=auto eol=lf
+
+# 二进制，别做任何行尾或编码转换
+*.png binary
+*.jpg binary
+*.so binary
+*.ko binary
